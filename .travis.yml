@@ -4,6 +4,7 @@ env:
 language: node_js
 node_js:
   - "6"
+  - "10"
 install:
   - curl -ks -u$ARTIFACTORY_USER:$ARTIFACTORY_PASS "${ARTIFACTORY_REGISTRY}/auth/d2l" -o .npmrc
   - npm config set @d2l:registry $ARTIFACTORY_REGISTRY
