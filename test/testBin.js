@@ -11,7 +11,7 @@ const verbose = true; // turn this on if you want to see checker command output
 
 function checkProject(projectPath, install = true) {
 
-	let args = [path.join('bin', 'd2l-license-checker')];
+	let args = [path.join('bin', 'ci-license-checker')];
 	if (projectPath) {
 		args.push(projectPath);
 	}
@@ -53,10 +53,6 @@ describe('Command invocation', () => {
 		assert.equal(checkProject(makeTestPath('proj-no-deps')), 0);
 	});
 
-	it('should allow a project with no configuration file', () => {
-		assert.equal(checkProject(makeTestPath('proj-no-cfg')), 0);
-	});
-
 	it('should ignore dev dependencies', () => {
 		assert.equal(checkProject(makeTestPath('proj-ok-dev')), 0);
 	});
@@ -75,10 +71,6 @@ describe('Command invocation', () => {
 
 	it('should reject license (prod)', () => {
 		assert.equal(checkProject(makeTestPath('proj-license-issue')), 2);
-	});
-
-	it('should accept the d2l scope', () => {
-		assert.equal(checkProject(makeTestPath('proj-ok-scope-d2l'), false), 0);
 	});
 
 	it('should reject a non-whitelisted scope', () => {

@@ -28,9 +28,9 @@ const argv = require('yargs')
 	.argv;
 const projectDir = argv._[0] || process.cwd();
 const configFilePath = path.resolve(argv._[1] || path.join(projectDir, defaultConfigFilePath));
-const configAcceptedEntries = ['manualOverrides', 'acceptedScopes', 'ignoreUnusedManualOverrides'];
+const configAcceptedEntries = ['acceptedLicenses', 'acceptedScopes', 'manualOverrides', 'ignoreUnusedManualOverrides'];
 const spdxExceptions = ['Public-Domain', 'Project-Owner'];
-const specialExemptionPrefix = 'D2L-Open-Source-Special-Exemption';
+const specialExemptionPrefix = 'ALLOWED';
 
 let acceptedSpdxExpr;
 let acceptedNonSpdx;
@@ -45,28 +45,26 @@ function handleError(err, code) {
 }
 
 function readConfig() {
-	try {
+	// try {
 		let data = fs.readFileSync(configFilePath, {encoding: 'utf8'});
 		config = JSON.parse(data);
-	} catch (err) {
-		console.error('No config file specified, using unmodified defaults.');
-		config = {};
-	}
+	// } catch (err) {
+	// 	handleError('No config file specified. Please add a file ' + defaultConfigFilePath + ' in your project');
+	// }
 	for (let key in config) {
 		if (configAcceptedEntries.indexOf(key) < 0) {
 			handleError(`${configFilePath}: "${key}" is not a valid entry (must be one of ${configAcceptedEntries}).`);
 		}
 	}
+	if (!config.acceptedLicenses || typeof config.acceptedLicenses !== 'object' || config.acceptedLicenses.length == 0) {
+		handleError(`${configFilePath}: "acceptedLicenses" must be a non-empty array.`);
+	}
 	if (config.manualOverrides && typeof config.manualOverrides !== 'object') {
 		handleError(`${configFilePath}: "manualOverrides" must be an object (${config.manualOverrides}).`);
 	}
+	config.manualOverrides = config.manualOverrides || {};
 	projectPackage = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json')));
-	const defaultConfig = require(`../config/default_config.json`);
-	config.acceptedLicenses = defaultConfig.acceptedLicenses;
-	config.acceptedScopes = _.union(defaultConfig.acceptedScopes, (config.acceptedScopes || []));
-	config.defaultManualOverrides = defaultConfig.manualOverrides;
-	config.manualOverrides = _.assign({}, defaultConfig.manualOverrides, (config.manualOverrides || {}));
-	config.ignoreUnusedManualOverrides = config.ignoreUnusedManualOverrides != null ? config.ignoreUnusedManualOverrides : defaultConfig.ignoreUnusedManualOverrides; // eslint-disable-line eqeqeq
+	config.ignoreUnusedManualOverrides = config.ignoreUnusedManualOverrides != null ? config.ignoreUnusedManualOverrides : false; // eslint-disable-line eqeqeq
 	let partitions = _.partition(config.acceptedLicenses, (license) => { // eslint-disable-line consistent-return
 		if (spdxIds.includes(license)) {
 			return true;
@@ -107,7 +105,7 @@ function checkLicense(licenseString, packageString) {
 
 function processLicenseCheckerOutput(json) {
 	let fail = false;
-	const overrideHelper = new OverrideHelper(config.manualOverrides, config.defaultManualOverrides);
+	const overrideHelper = new OverrideHelper(config.manualOverrides);
 	_.forEach(json, (value, key) => {
 		// When the licenses are provided as an array, always use the first string
 		const license = overrideHelper.find(key) ||
@@ -151,4 +149,4 @@ readConfig();
 npmChecker({ start: projectDir })
 	.catch(err => handleError('license-checker did not run successfully. Details:\n' + JSON.stringify(err)))
 	.then(json => processLicenseCheckerOutput(json))
-	.catch(err => handleError('Uncaught exception. Details:\n' + JSON.stringify(err)));
+	// .catch(err => handleError('Uncaught exception. Details:\n' + JSON.stringify(err)));
